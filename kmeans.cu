@@ -1,0 +1,31 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <cuda_runtime.h>
+
+void initialize_centroids(float *data, int n_samples, int n_features, int n_clusters, float *centroids_out)
+{
+    for (int i = 0; i < n_clusters; i++) // Ensures we only get maximum n_clusters clusters
+    {
+        int sample_idx = rand() % n_samples; // Randomly select a sample index
+        for (int f = 0; f < n_features; f++)
+        {
+            centroids_out[i * n_features + f] = data[sample_idx * n_features + f]; // Copy the sample to centroids
+        }
+    }
+}
+
+__global__ void compute_distances(float *data, float *centroids, int n_samples, int n_features, int k_clusters, int *labels_out)
+{
+}
+
+int kmeans(float *data, int n_samples, int n_features, int n_clusters, int n_iterations, int *labels)
+{
+    // Step 1: Randomly initialize K points as starting centroids
+    float *centroids = (float *)malloc(n_clusters * n_features * sizeof(float));
+    initialize_centroids(data, n_samples, n_features, n_clusters, centroids);
+
+    // Step 2: Allocate memory for distances and labels on the device
+    float *d_data, *d_centroids, *d_distances;
+    int *d_labels;
+}
