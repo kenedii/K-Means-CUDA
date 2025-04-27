@@ -1,5 +1,5 @@
 # K-Means-CUDA
-K Means Algorithm enhanced by CUDA C along with Python implementations using the C/Cuda Backend.
+K Means Clustering Algorithm enhanced by CUDA C along with Python implementations using the C/Cuda Backend.
 
 Implementations:
 - CPU: Naive CPU implementation
