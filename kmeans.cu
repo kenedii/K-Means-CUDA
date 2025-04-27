@@ -44,7 +44,7 @@ __global__ void compute_distances(float *data, float *centroids, int n_samples, 
     }
 }
 
-__global__ void update_centroids(float *data, int n_samples, int n_features, int k_clusters, int *labels, float *centroids_out)
+__global__ void update_centroids(float *data, int n_samples, int n_features, int k_clusters, int *labels, float *centroids_out, int *cluster_counts)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n_samples)
@@ -57,12 +57,18 @@ __global__ void update_centroids(float *data, int n_samples, int n_features, int
     }
 }
 
-__global__ void zero_cluster_counts(int *cluster_counts, int k_clusters)
+__global__ void normalize_centroids(int *cluster_counts, float *centroids_out, int k_clusters, int n_features)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < k_clusters)
     {
-        cluster_counts[i] = 0; // Initialize the cluster counts to zero
+        if (cluster_counts[i] > 0) // Avoid division by zero
+        {
+            for (int f = 0; f < n_features; f++)
+            {
+                centroids_out[i * n_features + f] /= cluster_counts[i]; // Normalize the centroid
+            }
+        }
     }
 }
 
@@ -86,18 +92,23 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
     cudaMemcpy(d_data, data, n_samples * n_features * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_centroids, centroids, k_clusters * n_features * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, n_samples * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemset(d_cluster_counts, 0, k_clusters * sizeof(int));
 
     int blockSize = 256;                                     // Number of threads per block
     int numBlocks = (n_samples + blockSize - 1) / blockSize; // Number of blocks needed (Total blocks in grid)
 
     for (int iter = 0; iter < n_iterations; iter++)
     {
-        int *cluster_counts = (int *)malloc(k_clusters * sizeof(int)); // Initialize cluster counts
-        cudaMemcpy(d_cluster_counts, cluster_counts, k_clusters * sizeof(int), cudaMemcpyHostToDevice);
-        zero_cluster_counts<<<(k_clusters + blockSize - 1) / blockSize, blockSize>>>(d_cluster_counts, k_clusters); // Initialize cluster counts to zero
-        cudaDeviceSynchronize();                                                                                    // Make sure all threads are done before moving on
-
+        // Here we compute the distances between each point and the centroids. d_labels[i] has cluster index for point i. d_cluster_counts[j] has number of points in cluster j.
         compute_distances<<<numBlocks, blockSize>>>(d_data, d_centroids, n_samples, n_features, k_clusters, d_labels, d_cluster_counts); // Launch kernel to compute distances
         cudaDeviceSynchronize();                                                                                                         // Make sure all threads are done before moving on
+
+        cudaMemset(d_centroids, 0, k_clusters * n_features * sizeof(float)); // clear centroids
+        // Step 3: Update centroids: Compute the new centroids as the mean of the points assigned to each cluster
+        update_centroids<<<numBlocks, blockSize>>>(d_data, n_samples, n_features, k_clusters, d_labels, d_centroids, d_cluster_counts); // Launch kernel to update centroids
+        cudaDeviceSynchronize();                                                                                                        // Make sure all threads are done before moving on
+
+        normalize_centroids<<<(k_clusters + blockDim.x - 1) / blockDim.x, blockDim.x>>>(d_cluster_counts, d_centroids, k_clusters, n_features); // Normalize the centroids
+        cudaDeviceSynchronize();                                                                                                                // Make sure all threads are done before moving on
     }
 }
