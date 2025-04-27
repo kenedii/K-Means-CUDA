@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <cuda_runtime.h>
-#include <math.h>
 #include <float.h>
 
 void initialize_centroids(float *data, int n_samples, int n_features, int k_clusters, float *centroids_out)
@@ -30,7 +29,8 @@ __global__ void compute_distances(float *data, float *centroids, int n_samples, 
             float dist = 0.0f;
             for (int f = 0; f < n_features; f++)
             {
-                dist += pow(data[i * n_features + f] - centroids[j * n_features + f], 2); // Compute the distance
+                float diff = data[i * n_features + f] - centroids[j * n_features + f]; // Compute the distance
+                dist += diff * diff;                                                   // Square the difference and accumulate
             }
 
             if (dist < min_dist) // Check if it's the minimum distance
@@ -99,6 +99,8 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
 
     for (int iter = 0; iter < n_iterations; iter++)
     {
+        cudaMemset(d_cluster_counts, 0, k_clusters * sizeof(int)); // Reset cluster counts
+
         // Here we compute the distances between each point and the centroids. d_labels[i] has cluster index for point i. d_cluster_counts[j] has number of points in cluster j.
         compute_distances<<<numBlocks, blockSize>>>(d_data, d_centroids, n_samples, n_features, k_clusters, d_labels, d_cluster_counts); // Launch kernel to compute distances
         cudaDeviceSynchronize();                                                                                                         // Make sure all threads are done before moving on
@@ -108,7 +110,7 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
         update_centroids<<<numBlocks, blockSize>>>(d_data, n_samples, n_features, k_clusters, d_labels, d_centroids, d_cluster_counts); // Launch kernel to update centroids
         cudaDeviceSynchronize();                                                                                                        // Make sure all threads are done before moving on
 
-        normalize_centroids<<<(k_clusters + blockDim.x - 1) / blockDim.x, blockDim.x>>>(d_cluster_counts, d_centroids, k_clusters, n_features); // Normalize the centroids
-        cudaDeviceSynchronize();                                                                                                                // Make sure all threads are done before moving on
+        normalize_centroids<<<(k_clusters + blockSize - 1) / blockSize, blockSize>>>(d_cluster_counts, d_centroids, k_clusters, n_features); // Normalize the centroids
+        cudaDeviceSynchronize();                                                                                                             // Make sure all threads are done before moving on
     }
 }
