@@ -3,6 +3,7 @@
 #include <time.h>
 #include <cuda_runtime.h>
 #include <math.h>
+#include <float.h>
 
 void initialize_centroids(float *data, int n_samples, int n_features, int k_clusters, float *centroids_out)
 {
@@ -32,7 +33,6 @@ __global__ void compute_distances(float *data, float *centroids, int n_samples, 
                 dist += pow(data[i * n_features + f] - centroids[j * n_features + f], 2); // Compute the distance
             }
 
-            dist = sqrt(dist);   // Take the square root
             if (dist < min_dist) // Check if it's the minimum distance
             {
                 min_dist = dist;
