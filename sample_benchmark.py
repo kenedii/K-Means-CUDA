@@ -67,7 +67,7 @@ def main():
     try:
         if gpu_available:
             gpu_model, gpu_time = run_kmeans("gpu", X, n_clusters, n_features)
-            print(f"GPU time : {gpu_time:.3f} s")
+            print(f"GPU time : {gpu_time:.3f} s ({cpu_time/gpu_time}x speedup)")
         else:
             raise FileNotFoundError("GPU artefacts not found")
     except Exception as exc:
