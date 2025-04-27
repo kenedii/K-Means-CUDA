@@ -97,7 +97,7 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
         zero_cluster_counts<<<(k_clusters + blockSize - 1) / blockSize, blockSize>>>(d_cluster_counts, k_clusters); // Initialize cluster counts to zero
         cudaDeviceSynchronize();                                                                                    // Make sure all threads are done before moving on
 
-        compute_distances<<<numBlocks, blockSize>>>(d_data, d_centroids, n_samples, n_features, k_clusters, d_labels); // Launch kernel to compute distances
-        cudaDeviceSynchronize();                                                                                       // Make sure all threads are done before moving on
+        compute_distances<<<numBlocks, blockSize>>>(d_data, d_centroids, n_samples, n_features, k_clusters, d_labels, d_cluster_counts); // Launch kernel to compute distances
+        cudaDeviceSynchronize();                                                                                                         // Make sure all threads are done before moving on
     }
 }
