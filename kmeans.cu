@@ -92,7 +92,6 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
     cudaMemcpy(d_data, data, n_samples * n_features * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_centroids, centroids, k_clusters * n_features * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_labels, labels, n_samples * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemset(d_cluster_counts, 0, k_clusters * sizeof(int));
 
     int blockSize = 256;                                     // Number of threads per block
     int numBlocks = (n_samples + blockSize - 1) / blockSize; // Number of blocks needed (Total blocks in grid)
@@ -113,4 +112,14 @@ int kmeans(float *data, int n_samples, int n_features, int k_clusters, int n_ite
         normalize_centroids<<<(k_clusters + blockSize - 1) / blockSize, blockSize>>>(d_cluster_counts, d_centroids, k_clusters, n_features); // Normalize the centroids
         cudaDeviceSynchronize();                                                                                                             // Make sure all threads are done before moving on
     }
+
+    cudaMemcpy(labels, d_labels, n_samples * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(centroids, d_centroids, k_clusters * n_features * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_data);
+    cudaFree(d_centroids);
+    cudaFree(d_labels);
+    cudaFree(d_cluster_counts);
+
+    return 0; // Return success
 }
