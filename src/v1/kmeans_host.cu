@@ -26,6 +26,39 @@ __global__ void initialize_centroids(
     int n_features,
     int k_clusters);
 
+extern "C" void initialize_centroids_host(
+    void *data,
+    void *centroids_out,
+    void *random_indices,
+    int n_features,
+    int k_clusters)
+{
+    // Cast void* to typed pointers
+    float *d_data = reinterpret_cast<float *>(data);
+    float *d_centroids_out = reinterpret_cast<float *>(centroids_out);
+    int *d_random_indices = reinterpret_cast<int *>(random_indices);
+
+    // Launch configuration
+    const int blockSize = 256;
+    const int numBlocks = (k_clusters + blockSize - 1) / blockSize;
+
+    // Launch the kernel
+    initialize_centroids<<<numBlocks, blockSize>>>(
+        d_data,
+        d_centroids_out,
+        d_random_indices,
+        n_features,
+        k_clusters);
+    cudaDeviceSynchronize(); // Wait for the kernel to finish
+
+    // Check for kernel launch errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+        return; // Error in kernel launch
+    }
+}
+
 /*
  * Step-2  – Assign points
  * For every sample i, compute its squared Euclidean distance to each
