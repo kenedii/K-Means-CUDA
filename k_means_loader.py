@@ -1,7 +1,7 @@
 import ctypes
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 import numpy as np
 
 class KMeans:
@@ -11,48 +11,41 @@ class KMeans:
         n_features: int,
         *,
         backend: Literal["gpu", "cpu"] = "gpu",
-        backend_prefix: str = "kmeans",
+        lib_path: str,
+        ptx_path: Optional[str] = None,
         block_size: int = 256,
     ):
         self.n_clusters = n_clusters
         self.n_features = n_features
         self.block_size = block_size
         self.backend = backend.lower()
-        root_dir = Path(__file__).resolve().parent
+
+        # Validate and load shared library
+        lib_path = Path(lib_path).resolve()
+        if not lib_path.is_file():
+            raise FileNotFoundError(f"Shared library not found: {lib_path}")
+        self._lib = ctypes.cdll.LoadLibrary(str(lib_path))
 
         # GPU backend setup
         if self.backend == "gpu":
+            if ptx_path is None:
+                raise ValueError("ptx_path must be provided for GPU backend")
+            ptx_path = Path(ptx_path).resolve()
+            if not ptx_path.is_file():
+                raise FileNotFoundError(f"Missing PTX file: {ptx_path}")
+            self._ptx_path = ptx_path
+
             import pycuda.driver as cuda
             import pycuda.autoinit
             import pycuda.gpuarray as gpuarray
 
             self.cuda = cuda
             self.gpuarray = gpuarray
-
-            # PTX only needed for predict, load later if necessary
             self._mod = None
             self._compute_distances_kernel = None
-            ptx_path = root_dir / f"{backend_prefix}_kernels.ptx"
-            if not ptx_path.is_file():
-                raise FileNotFoundError(f"Missing PTX file: {ptx_path}")
-            self._ptx_path = ptx_path
 
-            lib_name = f"lib{backend_prefix}.so" if os.name != "nt" else f"{backend_prefix}.dll"
-
-        elif self.backend == "cpu":
-            lib_name = (
-                f"lib{backend_prefix}_cpu.so"
-                if os.name != "nt"
-                else f"{backend_prefix}_cpu.dll"
-            )
-        else:
+        elif self.backend != "cpu":
             raise ValueError('backend must be either "gpu" or "cpu"')
-
-        lib_path = (root_dir / lib_name).resolve()
-        if not lib_path.is_file():
-            raise FileNotFoundError(f"Shared library not found: {lib_path}")
-
-        self._lib = ctypes.cdll.LoadLibrary(str(lib_path))
 
         # Common C entry-point
         self._kmeans_host = self._lib.kmeans
