@@ -28,7 +28,7 @@ __global__ void initialize_centroids(
  * For every sample i, compute its squared Euclidean distance to each centroid j.
  * Store the index of the nearest centroid in labels_out[i] and atomically increment cluster_counts[j].
  */
-__global__ void compute_distances(
+extern "C" __global__ void compute_distances(
     float *data,
     float *centroids,
     int n_samples,

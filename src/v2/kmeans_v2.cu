@@ -17,7 +17,7 @@ __global__ void initialize_centroids(float *data, float *centroids_out, int *ran
 }
 
 // Step 2: Assign points - Assign each point to the closest cluster
-__global__ void compute_distances(float *data, float *centroids, int n_samples, int n_features, int k_clusters, int *labels_out, int *cluster_counts)
+extern "C" __global__ void compute_distances(float *data, float *centroids, int n_samples, int n_features, int k_clusters, int *labels_out, int *cluster_counts)
 {
     extern __shared__ int local_cluster_counts[]; // Shared memory for cluster counts
 
