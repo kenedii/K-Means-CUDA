@@ -14,11 +14,18 @@ class KMeans:
         lib_path: str,
         ptx_path: Optional[str] = None,
         block_size: int = 256,
+        kernel_version: Literal["v1", "v2"] = "v1",
     ):
         self.n_clusters = n_clusters
         self.n_features = n_features
         self.block_size = block_size
         self.backend = backend.lower()
+        self.kernel_version = kernel_version.lower()
+
+        # Determine if shared memory is needed based on kernel_version
+        if self.kernel_version not in ["v1", "v2"]:
+            raise ValueError("kernel_version must be either 'v1' or 'v2'")
+        self.requires_shared_memory = (self.kernel_version == "v2")  # True for v2, False for v1
 
         # Validate and load shared library
         lib_path = Path(lib_path).resolve()
@@ -189,6 +196,8 @@ class KMeans:
             d_centroids = gpuarray.to_gpu(self.centroids_.astype(np.float32))
 
             grid = ((n_samples + self.block_size - 1) // self.block_size, 1, 1)
+            # Set shared memory size based on kernel version
+            shared_mem_size = (self.n_clusters * 4) if self.requires_shared_memory else 0  # 4 bytes per int
             self._compute_distances_kernel(
                 d_data.gpudata,
                 d_centroids.gpudata,
@@ -199,6 +208,7 @@ class KMeans:
                 d_cluster_counts.gpudata,
                 block=(self.block_size, 1, 1),
                 grid=grid,
+                shared=shared_mem_size  # Dynamically set shared memory
             )
             cuda.Context.synchronize()
             return d_labels.get()
