@@ -65,7 +65,7 @@ extern "C" void initialize_centroids_host(
  * centroid j.  Store the index of the nearest centroid in labels_out[i]
  * and atomically increment cluster_counts[j].
  */
-__global__ void compute_distances(
+extern "C" __global__ void compute_distances(
     float *data,
     float *centroids,
     int n_samples,
