@@ -22,6 +22,7 @@ To use the Python K Means class:
 - Parameter lib_path is the path to .so or .dll library (mandatory)
 - Parameter ptx_path is the path to .ptx kernels for JIT compilation (needed if using predict function)
 - Parameter block_size is the number of threads per block in the GPU CUDA grid (optional)
+- Parameter kernel_version is either 'v1' or 'v2'. Set this if using the GPU implementations. v1 by default. Optional parameter if using CPU.
 
 The K Means class functions are:
 - .fit() - Params: X: np.ndarray, n_iterations: int
