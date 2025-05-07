@@ -8,11 +8,12 @@ Implementations:
 - v2: GPU Implementation in Cuda C - Uses shared memory over global in compute_distances kernel
 
 Stats - 10 million point dataset, 25 features, 5 clusters, 5 iter:
-- Custom CPU : 26.880 s
-- Custom GPU v1 : 1.768 s  (×15.2 faster than CPU)
-- Custom GPU v2 : 1.417 s  (×19.0 faster than CPU)
-- scikit-learn : 4.883 s  (×5.5 faster than CPU)
-- PyTorch : 3.978 s  (×6.8 faster than CPU)
+- Custom CPU : 35.220 s
+- Custom GPU v1 : 2.459 s 
+- Custom GPU v2 : 2.204 s 
+- scikit-learn (Lloyd) : 5.629 s  
+- scikit-learn (Elkan) : 6.504 s 
+- PyTorch : 4.935 s  
 
 How to run:
 - pip install -r requirements.txt
